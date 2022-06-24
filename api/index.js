@@ -15,24 +15,48 @@ mongoClient.connect().then(() => {
 	db = mongoClient.db("banco_api_uol");
 });
 
-app.get('/participants', (req, res) => {
-    const promise = db.collection("users").find({}).toArray();
-    promise.then(user => res.send(user));
-    promise.catch(e => res.sendStatus(500));
-  });
+app.get('/participants', async (req, res) => {
+  try{
+    const users = await db.collection("users").find({}).toArray();
+    res.send(users);
+  }catch(error){
+    res.sendStatus(500);
+  }
+});
 
-app.post("/participants", (req, res)=> {
-    if (!req.body.name ) {
-        res.status(422).send("Nome de usuário é obrigatório");
+app.post("/participants", async (req, res)=> {    
+     
+    const userSchema = Joi.object({
+      name: Joi.string().min(1).required()
+    });
+
+    const userValidade = userSchema.validate(req.body)
+    const {error} = userValidade
+    const data = Date.now()
+
+    if (error){
+      const errorMsgs = error.details.map(err => err.message)
+      console.log(error)
+      res.status(422).send(errorMsgs)
+      return;
+    }
+
+    try{
+      const registeredUser = await db.collection("users").findOne({name : req.body.name})
+      if (registeredUser){
+        res.status(409).send("Usuário já existente, escolha outro nome de usuário")
         return;
       }
 
-    const promise = db.collection("users").insertOne(
+    await db.collection("users").insertOne(
         {
-            name: req.body.name
+          name: req.body.name ,
+          lastStatus: data
         });
-    promise.then(() => res.sendStatus(201));
-    promise.catch(e => res.sendStatus(500));
+      res.sendStatus(201);
+    }catch (error){
+      res.sendStatus(error);
+  }
 });
 
 app.listen(5000 ,  () => console.log('server running - port 5000'));
