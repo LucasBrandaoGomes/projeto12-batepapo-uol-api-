@@ -117,7 +117,7 @@ app.get('/messages', async (req, res) => {
   const geter = req.headers.user;
 
   try{
-    const messages = await db.collection("messages").find({from:geter}).toArray()
+    const messages = await db.collection("messages").find({$or : [{from:geter}, {to:geter}, {to: "Todos"}]}).toArray()
     
     res.send(messages);
   }catch(error){
