@@ -150,8 +150,22 @@ app.post('/status', async (req, res) => {
 
 async function disconnectUser(){
   const dateNow = Date.now()
-  const ableToDisconnect = await db.collection("users").find({})
-
+  const lessThan10 = dateNow - 10000
+  const ableToDisconnect = await db.collection("users").find({lastStatus: {$lt: lessThan10}}).toArray()
+  await db.collection("users").deleteMany({lastStatus: {$lt: lessThan10}})
+  
+  for (let i = 0; i < ableToDisconnect.length ; i++){
+    await db.collection("messages").insertOne(
+      {
+        from: ableToDisconnect[i].name,
+        to: 'Todos',
+        text: 'sai da sala...',
+        type: 'status',
+        time: hora.format('HH:mm:ss')
+      }
+    )
+  }
 }
+setInterval(disconnectUser, 15000)
 
 app.listen(5000 ,  () => console.log('server running - port 5000'));
