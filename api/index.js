@@ -125,4 +125,33 @@ app.get('/messages', async (req, res) => {
   }
 });
 
+app.post('/status', async (req, res) => {
+  
+  const userAtt = req.headers.user
+  const data = Date.now()
+  
+  try{
+    const registeredUser = await db.collection("users").findOne({name : userAtt})
+      if (!registeredUser){
+        res.sendStatus(404)
+        return;
+      }
+
+    await db.collection("users").updateOne(
+        {name: userAtt},
+        {$set: {
+          lastStatus: data
+        }});
+      res.sendStatus(201);
+    }catch (error){
+      res.sendStatus(error);
+  }
+})
+
+async function disconnectUser(){
+  const dateNow = Date.now()
+  const ableToDisconnect = await db.collection("users").find({})
+
+}
+
 app.listen(5000 ,  () => console.log('server running - port 5000'));
