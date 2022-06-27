@@ -123,7 +123,11 @@ app.get('/messages', async (req, res) => {
   try{
     const messages = await db.collection("messages").find({$or : [{from:geter}, {to:geter}, {to: "Todos"}]}).toArray()
     
-    res.send(messages);
+    if (limit){
+      res.send([...messages].reverse().slice(0, limit));
+    }else{
+      res.send([...messages].reverse());
+    }
   }catch(error){
     res.sendStatus(500);
   }
