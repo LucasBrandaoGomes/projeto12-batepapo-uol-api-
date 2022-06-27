@@ -3,14 +3,16 @@ import  cors  from "cors"
 import { MongoClient, ObjectId } from "mongodb";
 import Joi from "joi";
 import dayjs from "dayjs";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express()
-const hora = dayjs().locale('pt-br')
 
 app.use(cors());
 app.use(json());
 
-const mongoClient = new MongoClient("mongodb+srv://lucas_brandao:290400@cluster-brandao.f5lms.mongodb.net/?retryWrites=true&w=majority");
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
 
 mongoClient.connect().then(() => {
@@ -30,6 +32,8 @@ app.get('/participants', async (req, res) => {
 
 app.post("/participants", async (req, res)=> {    
      
+    const hora = dayjs().locale('pt-br')
+
     const userSchema = Joi.object({
       name: Joi.string().min(1).required()
     });
@@ -74,6 +78,7 @@ app.post("/participants", async (req, res)=> {
 //rotas de mensagens 
 
 app.post('/messages', async(req, res) => {
+    const hora = dayjs().locale('pt-br')
 
     const sender = req.headers.user.trim();
     const message = req.body;
@@ -96,7 +101,7 @@ app.post('/messages', async(req, res) => {
     try {
       const registeredUser = await db.collection("users").findOne({name : sender})
       if (!registeredUser){
-        res.send("Usuário não existe, efetue seu cadastro novamente")
+        res.send("Usuário não existe, efetue seu cadastro novamente").status(404)
         return;
       }
 
@@ -137,7 +142,6 @@ app.delete('/messages/:id', async (req, res) => {
   
   const user = req.headers.user;
   const id = req.params.id;
-  console.log(id)
 
   try{
     const messageToDelete = await db.collection('messages').findOne({ _id: new ObjectId(id) })
@@ -160,6 +164,7 @@ app.delete('/messages/:id', async (req, res) => {
 });
 
 app.put('/messages/:id', async(req, res) => {
+  const hora = dayjs().locale('pt-br')
 
   const id = req.params.id;
   const sender = req.headers.user.trim();
@@ -183,7 +188,7 @@ app.put('/messages/:id', async(req, res) => {
   try {
     const registeredUser = await db.collection("users").findOne({name : sender})
     if (!registeredUser){
-      res.send("Usuário não existe, efetue seu cadastro novamente")
+      res.status(404).send("Usuário não existe, efetue seu cadastro novamente")
       return;
     }
 
@@ -194,16 +199,21 @@ app.put('/messages/:id', async(req, res) => {
       return;
     }
 
-    await db.collection("messages").updateOne(
-        {_id: ObjectId(id)},
-        {
-          $set: {to: message.to.trim()},
-          $set: {text: message.text.trim()},
-          $set: {type: message.type.trim()},
-          $set: {time: hora.format('HH:mm:ss')}
-        }
-      );
-    res.send("Mensagem editada com sucesso").status(201);
+    if (sender === messageToUpdate.from){
+      
+      await db.collection("messages").updateOne(
+          {_id: ObjectId(id)},
+          {
+            $set: {to: message.to.trim()},
+            $set: {text: message.text.trim()},
+            $set: {type: message.type.trim()},
+            $set: {time: hora.format('HH:mm:ss')}
+          }
+        );
+      res.status(201).send("Mensagem editada com sucesso");
+      }else{
+        res.status(401).send("Voce não é o autor da mensagem");
+      }
   }catch (error){
     res.sendStatus(error);
 }
@@ -235,6 +245,9 @@ app.post('/status', async (req, res) => {
 })
 
 async function disconnectUser(){
+
+  const hora = dayjs().locale('pt-br')
+
   const dateNow = Date.now()
   const lessThan10 = dateNow - 10000
   const ableToDisconnect = await db.collection("users").find({lastStatus: {$lt: lessThan10}}).toArray()
@@ -253,7 +266,5 @@ async function disconnectUser(){
   }
 }
 setInterval(disconnectUser, 15000)
-
-
 
 app.listen(5000 ,  () => console.log('server running - port 5000'));
