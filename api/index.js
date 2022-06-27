@@ -124,16 +124,16 @@ app.get('/messages', async (req, res) => {
     const messages = await db.collection("messages").find({$or : [{from:geter}, {to:geter}, {to: "Todos"}]}).toArray()
     
     if (limit){
-      res.send([...messages].reverse().slice(0, limit));
+      res.send([...messages].slice(0, limit));
     }else{
-      res.send([...messages].reverse());
+      res.send([messages]);
     }
   }catch(error){
     res.sendStatus(500);
   }
 });
 
-app.delete('messages/:id', async (req, res) => {
+app.delete('/messages/:id', async (req, res) => {
   
   const user = req.headers.user;
   const id = req.params.id;
@@ -141,7 +141,6 @@ app.delete('messages/:id', async (req, res) => {
 
   try{
     const messageToDelete = await db.collection('messages').findOne({ _id: new ObjectId(id) })
-    console.log(messageToDelete)
 
     if (!messageToDelete){
       res.sendStatus(404);
@@ -153,7 +152,8 @@ app.delete('messages/:id', async (req, res) => {
     }
 
     await db.collection('messages').deleteOne({ _id: ObjectId(id) })
-   
+    res.send("Mensagem deletada com sucesso").status(200)
+
   }catch (error){
     res.send(error)
   }
@@ -203,7 +203,7 @@ app.put('/messages/:id', async(req, res) => {
           $set: {time: hora.format('HH:mm:ss')}
         }
       );
-    res.sendStatus(201)
+    res.send("Mensagem editada com sucesso").status(201);
   }catch (error){
     res.sendStatus(error);
 }
